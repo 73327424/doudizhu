@@ -509,10 +509,10 @@ const proto = {
 
     http.listen(this.port, () => {
       console.log(`server is running on port ${this.port}`);
-      (require('os').platform() == 'win32') && require('child_process').exec(`start http://localhost:${this.port}/index.html`);
+      //(require('os').platform() == 'win32') && require('child_process').exec(`start http://localhost:${this.port}/index.html`);
     });
   }
 }
 Object.assign(GameServer.prototype, proto);
-const gameServer = new GameServer(8001);
+const gameServer = new GameServer(6023);
 gameServer.init();
