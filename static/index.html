@@ -7,6 +7,102 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>在线斗地主</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* 添加聊天界面控制相关样式 */
+    .chat-toggle-btn {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+    
+    .chat-toggle-btn:hover {
+      background-color: #3e8e41;
+      transform: scale(1.05);
+    }
+    
+    .msg-box {
+      position: fixed;
+      right: 20px;
+      bottom: 90px;
+      width: 280px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      z-index: 999;
+      overflow: hidden;
+    }
+    
+    .msg-box.hidden {
+      transform: translateY(calc(100% + 70px));
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .msg-box-header {
+      padding: 10px 15px;
+      background: #4CAF50;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .msg-box-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    
+    .msg-box:not(.hidden) .msg-box-content {
+      max-height: 300px;
+    }
+    
+    .msg-list {
+      height: 200px;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    
+    .msg-input-container {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #eee;
+      background: #f9f9f9;
+    }
+    
+    .msg-input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+    
+    .msg-btn {
+      padding: 8px 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 
 <body>
@@ -185,23 +281,35 @@
         </div>
       </div>
 
-      <div class="msg-box">
-        <div class="msg-list scroll-bar" ref="msgBox">
-          <div class="msg-item" v-for="msg in msgList" :key="msg.id">
-            <span v-if="msg.type === 'USER'">
-              <span class="msg-item-time">[{{msg.time}}]</span>
-              <span style="color:red">{{msg.name}}</span> 说：{{msg.content}}
-            </span>
-            <span style="color:red;padding:15px 0" v-if="msg.type === 'SYS'">
-              <span class="msg-item-time">[{{msg.time}}] </span>系统消息：{{msg.content}}
-            </span>
+      <!-- 聊天界面 -->
+      <button class="chat-toggle-btn" @click="toggleChat">
+        {{ chatVisible ? '隐藏聊天' : '显示聊天' }}
+      </button>
+      
+      <div class="msg-box" :class="{ hidden: !chatVisible }">
+        <div class="msg-box-header" @click="toggleChat">
+          <span>聊天窗口</span>
+          <span>{{ chatVisible ? '▼' : '▲' }}</span>
+        </div>
+        
+        <div class="msg-box-content">
+          <div class="msg-list scroll-bar" ref="msgBox">
+            <div class="msg-item" v-for="msg in msgList" :key="msg.id">
+              <span v-if="msg.type === 'USER'">
+                <span class="msg-item-time">[{{msg.time}}]</span>
+                <span style="color:red">{{msg.name}}</span> 说：{{msg.content}}
+              </span>
+              <span style="color:red;padding:15px 0" v-if="msg.type === 'SYS'">
+                <span class="msg-item-time">[{{msg.time}}] </span>系统消息：{{msg.content}}
+              </span>
+            </div>
+          </div>
+          
+          <div class="msg-input-container">
+            <input type="text" class="input msg-input" ref="msgInput" @keyup.enter="sendMessage(false)" placeholder="输入消息...">
+            <button class="msg-btn" @click="sendMessage(false)">发送</button>
           </div>
         </div>
-        <input type="text" class="input msg-input" ref="msgInput" @keyup.enter="sendMessage(false)">
-        <select ref="msgSelect" class="input msg-input msg-select" style="width:15px;" @change="sendMessage($event)">
-          <option v-for="item in msgBox" :value="item">{{item}}</option>
-        </select>
-        <button class="msg-btn" @click="sendMessage(false)">发送</button>
       </div>
     </div>
 
@@ -212,11 +320,6 @@
   <script src="/js/layer/layer.js"></script>
   <script src="/js/parser.js"></script>
   <script>
-
-
-
-
-
     function createClient(url) {
       var socket = io.connect('ws://' + url);
       return socket;
@@ -226,6 +329,7 @@
       el: "#app",
       data: function () {
         return {
+          chatVisible: false, // 控制聊天界面显示隐藏
           msgBox: [
             '你的牌打得太好了',
             '快点吧，我等到花儿也谢了！',
@@ -544,6 +648,10 @@
         }.bind(this));
       },
       methods: {
+        // 切换聊天界面显示/隐藏
+        toggleChat: function() {
+          this.chatVisible = !this.chatVisible;
+        },
         login: function () {
           if (!this.posState.self.name) {
             return layer.msg('请输入名字');
